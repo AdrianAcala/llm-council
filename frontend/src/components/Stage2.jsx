@@ -7,6 +7,7 @@ function deAnonymizeText(text, labelToModel) {
 
   let result = text;
   Object.entries(labelToModel).forEach(([label, model]) => {
+    if (!model) return;
     const modelShortName = model.split('/')[1] || model;
     result = result.replace(new RegExp(label, 'g'), `**${modelShortName}**`);
   });
@@ -14,6 +15,7 @@ function deAnonymizeText(text, labelToModel) {
 }
 
 function getModelShortName(model) {
+  if (!model) return 'Unknown';
   return model.split('/')[1] || model;
 }
 
@@ -100,12 +102,13 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
           ))}
         </div>
 
+        {rankings[activeTab] && (
         <div className="bg-bg-card p-5 rounded-xl border border-border-custom">
           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border-light">
             <span className="inline-flex items-center px-2.5 py-1 bg-stage2-light border border-stage2 rounded-full font-mono text-xs text-stage2 font-medium">
-              {getModelShortName(rankings[activeTab].model)}
+              {getModelShortName(rankings[activeTab]?.model)}
             </span>
-            {rankings[activeTab].model.includes('/') && (
+            {rankings[activeTab]?.model?.includes('/') && (
               <span className="font-mono text-xs text-text-light">
                 {rankings[activeTab].model}
               </span>
@@ -113,12 +116,11 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
           </div>
           <div className="text-text-primary leading-relaxed">
             <ReactMarkdown>
-              {deAnonymizeText(rankings[activeTab].ranking, labelToModel)}
+              {deAnonymizeText(rankings[activeTab]?.ranking || '', labelToModel)}
             </ReactMarkdown>
           </div>
 
-          {rankings[activeTab].parsed_ranking &&
-           rankings[activeTab].parsed_ranking.length > 0 && (
+          {rankings[activeTab]?.parsed_ranking?.length > 0 && (
             <div className="mt-5 pt-5 border-t-2 border-border-light">
               <div className="flex items-center gap-1.5 mb-3">
                 <span className="text-sm">✓</span>
@@ -139,6 +141,7 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );

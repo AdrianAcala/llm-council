@@ -131,6 +131,11 @@ Models are hardcoded in `backend/config.py`. Chairman can be same or different f
 2. **CORS Issues**: Frontend must match allowed origins in `main.py` CORS middleware
 3. **Ranking Parse Failures**: If models don't follow format, fallback regex extracts any "Response X" patterns in order
 4. **Missing Metadata**: Metadata is ephemeral (not persisted), only available in API responses
+5. **Docker Port Mapping Issues**: If the frontend page doesn't load, check that ports are properly mapped:
+   - Run `./scripts/verify-deployment.sh` to verify everything is working
+   - Run `docker compose ps` and verify the PORTS column shows mappings like `0.0.0.0:5173->5173/tcp`
+   - If ports are missing, recreate the container: `docker compose rm -f frontend && docker compose up -d frontend`
+   - This happens when the port was in use during initial startup and Docker silently failed to bind it
 
 ## Future Enhancement Ideas
 

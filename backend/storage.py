@@ -18,24 +18,33 @@ def get_conversation_path(conversation_id: str) -> str:
     return os.path.join(DATA_DIR, f"{conversation_id}.json")
 
 
-def create_conversation(conversation_id: str) -> Dict[str, Any]:
+def create_conversation(conversation_id: str, settings: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Create a new conversation.
 
     Args:
         conversation_id: Unique identifier for the conversation
+        settings: Optional conversation settings (e.g., web_search_enabled)
 
     Returns:
         New conversation dict
     """
     ensure_data_dir()
 
+    # Default settings
     conversation = {
         "id": conversation_id,
         "created_at": datetime.utcnow().isoformat(),
         "title": "New Conversation",
-        "messages": []
+        "messages": [],
+        "settings": {
+            "web_search_enabled": True
+        }
     }
+
+    # Merge with provided settings
+    if settings:
+        conversation["settings"].update(settings)
 
     # Save to file
     path = get_conversation_path(conversation_id)
@@ -169,4 +178,23 @@ def update_conversation_title(conversation_id: str, title: str):
         raise ValueError(f"Conversation {conversation_id} not found")
 
     conversation["title"] = title
+    save_conversation(conversation)
+
+
+def update_conversation_settings(conversation_id: str, settings: Dict[str, Any]):
+    """
+    Update the settings of a conversation.
+
+    Args:
+        conversation_id: Conversation identifier
+        settings: Settings dict to merge with existing settings
+    """
+    conversation = get_conversation(conversation_id)
+    if conversation is None:
+        raise ValueError(f"Conversation {conversation_id} not found")
+
+    if "settings" not in conversation:
+        conversation["settings"] = {}
+
+    conversation["settings"].update(settings)
     save_conversation(conversation)

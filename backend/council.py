@@ -7,17 +7,18 @@ from .config import COUNCIL_MODELS, CHAIRMAN_MODEL, ENABLE_WEB_SEARCH, WEB_SEARC
 from .web_search import perform_web_search_for_query
 
 
-async def get_search_context(user_query: str) -> str:
+async def get_search_context(user_query: str, web_search_enabled: bool = True) -> str:
     """
     Get web search context for the user query.
 
     Args:
         user_query: The user's question
+        web_search_enabled: Whether to perform web search (defaults to True)
 
     Returns:
         Formatted search context or empty string if disabled/failed
     """
-    if not ENABLE_WEB_SEARCH:
+    if not web_search_enabled:
         return ""
 
     try:
@@ -359,18 +360,19 @@ Title:"""
     return title
 
 
-async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
+async def run_full_council(user_query: str, web_search_enabled: bool = True) -> Tuple[List, List, Dict, Dict]:
     """
     Run the complete 3-stage council process with optional web search.
 
     Args:
         user_query: The user's question
+        web_search_enabled: Whether to perform web search (defaults to True)
 
     Returns:
         Tuple of (stage1_results, stage2_results, stage3_result, metadata)
     """
     # Perform web search in parallel with any other setup (if enabled)
-    search_task = asyncio.create_task(get_search_context(user_query))
+    search_task = asyncio.create_task(get_search_context(user_query, web_search_enabled))
 
     # Wait for search results
     search_context = await search_task
@@ -408,7 +410,7 @@ async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
     metadata = {
         "label_to_model": label_to_model,
         "aggregate_rankings": aggregate_rankings,
-        "web_search_enabled": ENABLE_WEB_SEARCH,
+        "web_search_enabled": web_search_enabled,
         "web_search_context_length": len(search_context) if search_context else 0
     }
 

@@ -9,6 +9,7 @@ function App() {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(true);
 
   // Load conversations on mount
   useEffect(() => {
@@ -35,6 +36,9 @@ function App() {
     try {
       const conv = await api.getConversation(id);
       setCurrentConversation(conv);
+      // Load web search setting from conversation settings
+      const settings = conv.settings || {};
+      setWebSearchEnabled(settings.web_search_enabled !== false);
     } catch (error) {
       console.error('Failed to load conversation:', error);
     }
@@ -42,7 +46,7 @@ function App() {
 
   const handleNewConversation = async () => {
     try {
-      const newConv = await api.createConversation();
+      const newConv = await api.createConversation({ web_search_enabled: webSearchEnabled });
       setConversations([
         { id: newConv.id, created_at: newConv.created_at, message_count: 0 },
         ...conversations,
@@ -55,6 +59,22 @@ function App() {
 
   const handleSelectConversation = (id) => {
     setCurrentConversationId(id);
+  };
+
+  const toggleWebSearch = async () => {
+    const newValue = !webSearchEnabled;
+    setWebSearchEnabled(newValue);
+
+    // Persist to backend if we have a current conversation
+    if (currentConversationId) {
+      try {
+        await api.updateConversationSettings(currentConversationId, {
+          web_search_enabled: newValue
+        });
+      } catch (error) {
+        console.error('Failed to update conversation settings:', error);
+      }
+    }
   };
 
   const handleSendMessage = async (content) => {
@@ -90,7 +110,10 @@ function App() {
       }));
 
       // Send message with streaming
-      await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
+      await api.sendMessageStream(
+        currentConversationId,
+        content,
+        (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
             setCurrentConversation((prev) => {
@@ -169,7 +192,9 @@ function App() {
           default:
             console.log('Unknown event type:', eventType);
         }
-      });
+      },
+      { web_search_enabled: webSearchEnabled }
+    );
     } catch (error) {
       console.error('Failed to send message:', error);
       // Remove optimistic messages on error
@@ -193,6 +218,8 @@ function App() {
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
+        webSearchEnabled={webSearchEnabled}
+        onToggleWebSearch={toggleWebSearch}
       />
     </div>
   );

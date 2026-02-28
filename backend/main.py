@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import uuid
 import json
 import asyncio
@@ -35,12 +35,18 @@ app.add_middleware(
 
 class CreateConversationRequest(BaseModel):
     """Request to create a new conversation."""
-    pass
+    web_search_enabled: bool = True
 
 
 class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
     content: str
+    web_search_enabled: Optional[bool] = None
+
+
+class UpdateSettingsRequest(BaseModel):
+    """Request to update conversation settings."""
+    web_search_enabled: bool
 
 
 class ConversationMetadata(BaseModel):
@@ -57,6 +63,7 @@ class Conversation(BaseModel):
     created_at: str
     title: str
     messages: List[Dict[str, Any]]
+    settings: Dict[str, Any] = {"web_search_enabled": True}
 
 
 @app.get("/")
@@ -81,7 +88,8 @@ async def list_conversations():
 async def create_conversation(request: CreateConversationRequest):
     """Create a new conversation."""
     conversation_id = str(uuid.uuid4())
-    conversation = storage.create_conversation(conversation_id)
+    settings = {"web_search_enabled": request.web_search_enabled}
+    conversation = storage.create_conversation(conversation_id, settings)
     return conversation
 
 
@@ -92,6 +100,26 @@ async def get_conversation(conversation_id: str):
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return conversation
+
+
+@app.patch("/api/conversations/{conversation_id}/settings")
+async def update_conversation_settings_endpoint(
+    conversation_id: str,
+    request: UpdateSettingsRequest
+):
+    """
+    Update conversation settings.
+    """
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    storage.update_conversation_settings(
+        conversation_id,
+        {"web_search_enabled": request.web_search_enabled}
+    )
+
+    return {"status": "ok", "settings": {"web_search_enabled": request.web_search_enabled}}
 
 
 @app.post("/api/conversations/{conversation_id}/message")
@@ -116,9 +144,14 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         title = await generate_conversation_title(request.content)
         storage.update_conversation_title(conversation_id, title)
 
+    # Get web search setting (use request value, fallback to conversation setting)
+    conv_settings = conversation.get("settings", {})
+    web_search_enabled = request.web_search_enabled if request.web_search_enabled is not None else conv_settings.get("web_search_enabled", True)
+
     # Run the 3-stage council process
     stage1_results, stage2_results, stage3_result, metadata = await run_full_council(
-        request.content
+        request.content,
+        web_search_enabled=web_search_enabled
     )
 
     # Add assistant message with all stages
@@ -152,6 +185,10 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
     # Check if this is the first message
     is_first_message = len(conversation["messages"]) == 0
 
+    # Get web search setting (use request value, fallback to conversation setting)
+    conv_settings = conversation.get("settings", {})
+    web_search_enabled = request.web_search_enabled if request.web_search_enabled is not None else conv_settings.get("web_search_enabled", True)
+
     async def event_generator():
         try:
             # Add user message
@@ -162,7 +199,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             if is_first_message:
                 title_task = asyncio.create_task(generate_conversation_title(request.content))
 
-            search_task = asyncio.create_task(get_search_context(request.content))
+            search_task = asyncio.create_task(get_search_context(request.content, web_search_enabled))
 
             # Wait for web search to complete
             search_context = await search_task

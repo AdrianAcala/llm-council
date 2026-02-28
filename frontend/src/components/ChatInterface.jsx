@@ -9,6 +9,8 @@ export default function ChatInterface({
   conversation,
   onSendMessage,
   isLoading,
+  webSearchEnabled,
+  onToggleWebSearch,
 }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
@@ -161,25 +163,46 @@ export default function ChatInterface({
       </div>
 
       {isEmpty && (
-        <form onSubmit={handleSubmit} className="flex items-end gap-3 px-12 pb-8 pt-6 border-t border-border-custom bg-bg-card relative">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 px-12 pb-8 pt-6 border-t border-border-custom bg-bg-card relative">
           <div className="absolute -top-px left-12 right-12 h-px bg-gradient-to-r from-transparent via-border-custom to-transparent" />
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            rows={3}
-            placeholder="What would you like to ask the council? (Shift+Enter for new line)"
-            className="flex-1 py-4 px-5 bg-bg-primary border border-border-custom rounded-xl text-text-primary text-[15px] leading-relaxed resize-y min-h-14 max-h-48 transition-base placeholder:text-text-light focus:border-accent-gold focus:ring-3 focus:ring-accent-gold/10 focus:bg-bg-card disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-bg-secondary"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="py-4 px-7 bg-text-primary text-bg-card rounded-xl text-[15px] font-medium whitespace-nowrap h-14 flex items-center gap-2 transition-base hover:bg-accent-bronze hover:border-accent-bronze hover:-translate-y-px hover:shadow-md active:translate-y-0 active:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-text-light disabled:hover:translate-y-0 disabled:hover:shadow-none group"
-          >
-            Send
-            <span className="text-lg transition-fast group-hover:translate-x-0.5">→</span>
-          </button>
+          <div className="flex items-end gap-3">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isLoading}
+              rows={3}
+              placeholder="What would you like to ask the council? (Shift+Enter for new line)"
+              className="flex-1 py-4 px-5 bg-bg-primary border border-border-custom rounded-xl text-text-primary text-[15px] leading-relaxed resize-y min-h-14 max-h-48 transition-base placeholder:text-text-light focus:border-accent-gold focus:ring-3 focus:ring-accent-gold/10 focus:bg-bg-card disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-bg-secondary"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="py-4 px-7 bg-text-primary text-bg-card rounded-xl text-[15px] font-medium whitespace-nowrap h-14 flex items-center gap-2 transition-base hover:bg-accent-bronze hover:border-accent-bronze hover:-translate-y-px hover:shadow-md active:translate-y-0 active:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-text-light disabled:hover:translate-y-0 disabled:hover:shadow-none group"
+            >
+              Send
+              <span className="text-lg transition-fast group-hover:translate-x-0.5">→</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggleWebSearch}
+              disabled={isLoading}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-base disabled:opacity-40 disabled:cursor-not-allowed ${
+                webSearchEnabled
+                  ? 'bg-accent-teal/10 text-accent-teal border border-accent-teal/30'
+                  : 'bg-bg-primary text-text-muted border border-border-custom'
+              }`}
+              title={webSearchEnabled ? 'Web search is enabled - click to disable' : 'Web search is disabled - click to enable'}
+            >
+              <span className="text-base">{webSearchEnabled ? '🌐' : '🚫'}</span>
+              <span>{webSearchEnabled ? 'Web Search On' : 'Web Search Off'}</span>
+            </button>
+            <span className="text-xs text-text-muted">
+              {webSearchEnabled ? 'Models will use web search results' : 'Models will rely on their training data only'}
+            </span>
+          </div>
         </form>
       )}
     </div>

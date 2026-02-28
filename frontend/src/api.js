@@ -2,7 +2,10 @@
  * API client for the LLM Council backend.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8001';
+// Use VITE_API_BASE if set, otherwise default to localhost for local dev
+// In Docker, VITE_API_BASE should be set to empty string to use relative URLs with Vite proxy
+const envBase = import.meta.env.VITE_API_BASE;
+const API_BASE = envBase === undefined || envBase === null ? 'http://localhost:8001' : envBase.trim();
 
 export const api = {
   /**
@@ -18,14 +21,16 @@ export const api = {
 
   /**
    * Create a new conversation.
+   * @param {Object} settings - Optional conversation settings
+   * @param {boolean} settings.web_search_enabled - Whether web search is enabled
    */
-  async createConversation() {
+  async createConversation(settings = {}) {
     const response = await fetch(`${API_BASE}/api/conversations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify(settings),
     });
     if (!response.ok) {
       throw new Error('Failed to create conversation');
@@ -71,9 +76,11 @@ export const api = {
    * @param {string} conversationId - The conversation ID
    * @param {string} content - The message content
    * @param {function} onEvent - Callback function for each event: (eventType, data) => void
+   * @param {Object} options - Optional settings
+   * @param {boolean} options.web_search_enabled - Whether to enable web search
    * @returns {Promise<void>}
    */
-  async sendMessageStream(conversationId, content, onEvent) {
+  async sendMessageStream(conversationId, content, onEvent, options = {}) {
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
@@ -81,7 +88,10 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content,
+          web_search_enabled: options.web_search_enabled
+        }),
       }
     );
 
@@ -111,5 +121,28 @@ export const api = {
         }
       }
     }
+  },
+
+  /**
+   * Update conversation settings.
+   * @param {string} conversationId - The conversation ID
+   * @param {Object} settings - Settings to update
+   * @param {boolean} settings.web_search_enabled - Whether to enable web search
+   */
+  async updateConversationSettings(conversationId, settings) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/settings`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to update conversation settings');
+    }
+    return response.json();
   },
 };

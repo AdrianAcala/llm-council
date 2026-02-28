@@ -9,6 +9,12 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - COUNCIL_MODELS=${COUNCIL_MODELS:-openai/gpt-5.1,google/gemini-3-pro-preview,anthropic/claude-sonnet-4.5}
       - CHAIRMAN_MODEL=${CHAIRMAN_MODEL:-google/gemini-3-pro-preview}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-}
+      - OLLAMA_TOKEN=${OLLAMA_TOKEN:-}
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH:-true}
+      - WEB_SEARCH_NUM_QUERIES=${WEB_SEARCH_NUM_QUERIES:-3}
+      - WEB_SEARCH_MAX_RESULTS=${WEB_SEARCH_MAX_RESULTS:-5}
+      - WEB_SEARCH_FETCH_FULL=${WEB_SEARCH_FETCH_FULL:-false}
     volumes:
       - ./data:/app/data
     restart: unless-stopped
@@ -26,7 +32,10 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_BASE=${VITE_API_BASE:-http://localhost:8001}
+      # Empty string to use relative URLs (Vite will proxy /api/* to backend)
+      - VITE_API_BASE=
+      # BACKEND_URL is used by Vite dev server proxy to reach backend via Docker network
+      - BACKEND_URL=http://backend:8001
     depends_on:
       - backend
     restart: unless-stopped

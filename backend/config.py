@@ -9,7 +9,8 @@ _dotenv_path = os.path.join(_project_root, '.env')
 load_dotenv(_dotenv_path)
 
 # Ollama API key (use OLLAMA_API_KEY for cloud, OLLAMA_TOKEN for local)
-OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", os.getenv("OLLAMA_TOKEN", ""))
+# Handle empty strings from .env file by checking truthiness
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "") or os.getenv("OLLAMA_TOKEN", "")
 OLLAMA_TOKEN = OLLAMA_API_KEY
 
 # Council members - list of model identifiers (comma-separated in .env)
