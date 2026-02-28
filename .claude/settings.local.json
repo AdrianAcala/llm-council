@@ -1,5 +1,28 @@
 {
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__playwright__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[hooks] MCP Playwright test detected - reloading servers...' && pkill -f 'python -m backend.main' 2>/dev/null || true && pkill -f 'vite' 2>/dev/null || true && sleep 1 && (cd /home/adrian/Documents/git/llm-council && uv run python -m backend.main > /dev/null 2>&1 &) && (cd /home/adrian/Documents/git/llm-council/frontend && npm run dev > /dev/null 2>&1 &) && echo '[hooks] Servers restarted'"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[hooks] Session ending - reloading servers for next session...' && pkill -f 'python -m backend.main' 2>/dev/null || true && pkill -f 'vite' 2>/dev/null || true && sleep 1 && (cd /home/adrian/Documents/git/llm-council && uv run python -m backend.main > /dev/null 2>&1 &) && (cd /home/adrian/Documents/git/llm-council/frontend && npm run dev > /dev/null 2>&1 &) && echo '[hooks] Servers ready for next session'"
+          }
+        ]
+      }
+    ]
   }
 }

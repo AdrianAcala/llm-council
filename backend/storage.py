@@ -198,3 +198,25 @@ def update_conversation_settings(conversation_id: str, settings: Dict[str, Any])
 
     conversation["settings"].update(settings)
     save_conversation(conversation)
+
+
+def delete_all_conversations():
+    """
+    Delete all conversations from storage.
+
+    Returns:
+        Number of conversations deleted
+    """
+    ensure_data_dir()
+
+    deleted_count = 0
+    for filename in os.listdir(DATA_DIR):
+        if filename.endswith('.json'):
+            path = os.path.join(DATA_DIR, filename)
+            try:
+                os.remove(path)
+                deleted_count += 1
+            except OSError as e:
+                print(f"Failed to delete {path}: {e}")
+
+    return deleted_count

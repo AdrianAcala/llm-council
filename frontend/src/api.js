@@ -145,4 +145,17 @@ export const api = {
     }
     return response.json();
   },
+
+  /**
+   * Delete all conversations.
+   */
+  async deleteAllConversations() {
+    const response = await fetch(`${API_BASE}/api/conversations`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete conversations');
+    }
+    return response.json();
+  },
 };

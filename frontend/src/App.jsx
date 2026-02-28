@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
+import SettingsPage from './components/SettingsPage';
 import { api } from './api';
 import './App.css';
 
@@ -10,6 +11,7 @@ function App() {
   const [currentConversation, setCurrentConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Load conversations on mount
   useEffect(() => {
@@ -59,6 +61,20 @@ function App() {
 
   const handleSelectConversation = (id) => {
     setCurrentConversationId(id);
+  };
+
+  const handleOpenSettings = () => {
+    setShowSettings(true);
+  };
+
+  const handleCloseSettings = () => {
+    setShowSettings(false);
+  };
+
+  const handleConversationsDeleted = () => {
+    setConversations([]);
+    setCurrentConversationId(null);
+    setCurrentConversation(null);
   };
 
   const toggleWebSearch = async () => {
@@ -213,14 +229,22 @@ function App() {
         currentConversationId={currentConversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        onOpenSettings={handleOpenSettings}
       />
-      <ChatInterface
-        conversation={currentConversation}
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading}
-        webSearchEnabled={webSearchEnabled}
-        onToggleWebSearch={toggleWebSearch}
-      />
+      {showSettings ? (
+        <SettingsPage
+          onClose={handleCloseSettings}
+          onConversationsDeleted={handleConversationsDeleted}
+        />
+      ) : (
+        <ChatInterface
+          conversation={currentConversation}
+          onSendMessage={handleSendMessage}
+          isLoading={isLoading}
+          webSearchEnabled={webSearchEnabled}
+          onToggleWebSearch={toggleWebSearch}
+        />
+      )}
     </div>
   );
 }
