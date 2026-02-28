@@ -18,10 +18,15 @@ from .council import (
 
 app = FastAPI(title="LLM Council API")
 
-# Enable CORS for local development
+# Enable CORS for local development and Docker
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://frontend:5173",
+        "http://frontend:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,8 +61,14 @@ class Conversation(BaseModel):
 
 @app.get("/")
 async def root():
-    """Health check endpoint."""
+    """Root endpoint."""
     return {"status": "ok", "service": "LLM Council API"}
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint for Docker."""
+    return {"status": "healthy"}
 
 
 @app.get("/api/conversations", response_model=List[ConversationMetadata])

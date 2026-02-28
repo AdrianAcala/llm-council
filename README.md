@@ -76,6 +76,32 @@ npm run dev
 
 Then open http://localhost:5173 in your browser.
 
+**Option 3: Docker Compose**
+
+1. Copy the Docker environment template:
+```bash
+cp .env.docker .env
+```
+
+2. Edit `.env` and add your OpenRouter API key.
+
+3. Build and start the containers:
+```bash
+docker compose up --build
+```
+
+4. Open http://localhost:5173 in your browser.
+
+To stop the containers:
+```bash
+docker compose down
+```
+
+To view logs:
+```bash
+docker compose logs -f
+```
+
 ## Tech Stack
 
 - **Backend:** FastAPI (Python 3.10+), async httpx, OpenRouter API
