@@ -1,8 +1,8 @@
-"""OpenRouter API client for making LLM requests."""
+"""Ollama API client for making LLM requests."""
 
 import httpx
 from typing import List, Dict, Any, Optional
-from .config import OPENROUTER_API_KEY, OPENROUTER_API_URL
+from .config import OLLAMA_TOKEN, OLLAMA_API_URL
 
 
 async def query_model(
@@ -11,18 +11,22 @@ async def query_model(
     timeout: float = 120.0
 ) -> Optional[Dict[str, Any]]:
     """
-    Query a single model via OpenRouter API.
+    Query a single model via Ollama API.
 
     Args:
-        model: OpenRouter model identifier (e.g., "openai/gpt-4o")
+        model: Ollama model identifier (e.g. "kimi-k2.5:cloud")
         messages: List of message dicts with 'role' and 'content'
         timeout: Request timeout in seconds
 
     Returns:
         Response dict with 'content' and optional 'reasoning_details', or None if failed
     """
+    if not OLLAMA_TOKEN:
+        print("ERROR: OLLAMA_TOKEN is not set. Please set OLLAMA_API_KEY or OLLAMA_TOKEN environment variable.")
+        return None
+
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Authorization": f"Bearer {OLLAMA_TOKEN}",
         "Content-Type": "application/json",
     }
 
@@ -34,7 +38,7 @@ async def query_model(
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
-                OPENROUTER_API_URL,
+                OLLAMA_API_URL,
                 headers=headers,
                 json=payload
             )
@@ -48,8 +52,14 @@ async def query_model(
                 'reasoning_details': message.get('reasoning_details')
             }
 
+    except httpx.HTTPStatusError as e:
+        print(f"HTTP Error querying model {model}: {e.response.status_code} - {e.response.text[:500]}")
+        return None
+    except httpx.RequestError as e:
+        print(f"Request Error querying model {model}: {type(e).__name__}: {e}")
+        return None
     except Exception as e:
-        print(f"Error querying model {model}: {e}")
+        print(f"Error querying model {model}: {type(e).__name__}: {e}")
         return None
 
 
@@ -61,7 +71,7 @@ async def query_models_parallel(
     Query multiple models in parallel.
 
     Args:
-        models: List of OpenRouter model identifiers
+        models: List of Ollama model identifiers
         messages: List of message dicts to send to each model
 
     Returns:

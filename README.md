@@ -44,17 +44,14 @@ Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purcha
 
 ### 3. Configure Models (Optional)
 
-Edit `backend/config.py` to customize the council:
+Add to your `.env` file to customize the council:
 
-```python
-COUNCIL_MODELS = [
-    "openai/gpt-5.1",
-    "google/gemini-3-pro-preview",
-    "anthropic/claude-sonnet-4.5",
-    "x-ai/grok-4",
-]
+```bash
+# Comma-separated list of models
+COUNCIL_MODELS=openai/gpt-5.1,google/gemini-3-pro-preview,anthropic/claude-sonnet-4.5
 
-CHAIRMAN_MODEL = "google/gemini-3-pro-preview"
+# Chairman model synthesizes the final response
+CHAIRMAN_MODEL=google/gemini-3-pro-preview
 ```
 
 ## Running the Application
@@ -85,3 +82,35 @@ Then open http://localhost:5173 in your browser.
 - **Frontend:** React + Vite, react-markdown for rendering
 - **Storage:** JSON files in `data/conversations/`
 - **Package Management:** uv for Python, npm for JavaScript
+
+## Testing
+
+There are two types of tests:
+
+- **Integration tests** (`backend/tests/integration/`) - Call backend functions directly, no HTTP layer
+- **E2E tests** (`backend/tests/e2e/`) - Hit the FastAPI HTTP endpoints like a real client
+
+### Running Tests
+
+First install dev dependencies:
+
+```bash
+pip install -e ".[dev]"
+# or with uv:
+uv pip install -e ".[dev]"
+```
+
+Then run the tests:
+
+```bash
+# All tests
+pytest backend/tests/ -v
+
+# Integration tests only
+pytest backend/tests/integration/ -v
+
+# E2E tests only
+pytest backend/tests/e2e/ -v
+```
+
+Integration tests are faster and good for testing logic. E2E tests verify the full HTTP stack including request/response handling.
