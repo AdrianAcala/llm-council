@@ -3,7 +3,7 @@
 import asyncio
 from typing import List, Dict, Any, Tuple
 from .openrouter import query_models_parallel, query_model
-from .config import COUNCIL_MODELS, CHAIRMAN_MODEL, ENABLE_WEB_SEARCH, WEB_SEARCH_NUM_QUERIES, WEB_SEARCH_MAX_RESULTS, WEB_SEARCH_FETCH_FULL
+from .config import COUNCIL_MODELS, CHAIRMAN_MODEL, TITLE_MODEL, ENABLE_WEB_SEARCH, WEB_SEARCH_NUM_QUERIES, WEB_SEARCH_MAX_RESULTS, WEB_SEARCH_FETCH_FULL
 from .web_search import perform_web_search_for_query
 
 
@@ -332,6 +332,12 @@ async def generate_conversation_title(user_query: str) -> str:
     Returns:
         A short title (3-5 words)
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"Generating title for query: {user_query[:50]}...")
+    logger.info(f"Using TITLE_MODEL: {TITLE_MODEL}")
+
     title_prompt = f"""Generate a very short title (3-5 words maximum) that summarizes the following question.
 The title should be concise and descriptive. Do not use quotes or punctuation in the title.
 
@@ -341,14 +347,20 @@ Title:"""
 
     messages = [{"role": "user", "content": title_prompt}]
 
-    # Use gemini-2.5-flash for title generation (fast and cheap)
-    response = await query_model("google/gemini-2.5-flash", messages, timeout=30.0)
+    try:
+        # Use configured title model (defaults to CHAIRMAN_MODEL)
+        response = await query_model(TITLE_MODEL, messages, timeout=30.0)
+        logger.info(f"Title generation response: {response}")
+    except Exception as e:
+        logger.error(f"Error during title generation query: {e}")
+        return "New Conversation"
 
     if response is None:
-        # Fallback to a generic title
+        logger.warning("Title generation returned None, using default")
         return "New Conversation"
 
     title = response.get('content', 'New Conversation').strip()
+    logger.info(f"Generated title: {title}")
 
     # Clean up the title - remove quotes, limit length
     title = title.strip('"\'')

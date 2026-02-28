@@ -148,8 +148,12 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
 
     # If this is the first message, generate a title
     if is_first_message:
-        title = await generate_conversation_title(request.content)
-        storage.update_conversation_title(conversation_id, title)
+        try:
+            title = await generate_conversation_title(request.content)
+            storage.update_conversation_title(conversation_id, title)
+        except Exception as e:
+            print(f"Title generation failed: {e}")
+            # Continue without title
 
     # Get web search setting (use request value, fallback to conversation setting)
     conv_settings = conversation.get("settings", {})
@@ -231,9 +235,13 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
 
             # Wait for title generation if it was started
             if title_task:
-                title = await title_task
-                storage.update_conversation_title(conversation_id, title)
-                yield f"data: {json.dumps({'type': 'title_complete', 'data': {'title': title}})}\n\n"
+                try:
+                    title = await title_task
+                    storage.update_conversation_title(conversation_id, title)
+                    yield f"data: {json.dumps({'type': 'title_complete', 'data': {'title': title}})}\n\n"
+                except Exception as e:
+                    print(f"Title generation failed: {e}")
+                    # Continue without title - conversation will keep default name
 
             # Save complete assistant message
             storage.add_assistant_message(

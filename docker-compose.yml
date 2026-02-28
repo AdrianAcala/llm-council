@@ -15,6 +15,7 @@ services:
       - WEB_SEARCH_NUM_QUERIES=${WEB_SEARCH_NUM_QUERIES:-3}
       - WEB_SEARCH_MAX_RESULTS=${WEB_SEARCH_MAX_RESULTS:-5}
       - WEB_SEARCH_FETCH_FULL=${WEB_SEARCH_FETCH_FULL:-false}
+      - TITLE_MODEL=${TITLE_MODEL:-kimi-k2.5:cloud}
     volumes:
       - ./data:/app/data
     restart: unless-stopped

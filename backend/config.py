@@ -23,6 +23,9 @@ COUNCIL_MODELS = [m.strip() for m in _default_models.split(",") if m.strip()]
 # Chairman model - synthesizes final response
 CHAIRMAN_MODEL = os.getenv("CHAIRMAN_MODEL", "google/gemini-3-pro-preview")
 
+# Title generation model - generates conversation titles (fast/cheap model preferred)
+TITLE_MODEL = os.getenv("TITLE_MODEL", "kimi-k2.5:cloud")
+
 # Ollama API endpoint (OpenAI-compatible)
 # Local: http://localhost:11434/v1/chat/completions
 # Cloud: https://ollama.com/v1/chat/completions
