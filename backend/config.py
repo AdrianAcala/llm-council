@@ -29,3 +29,9 @@ OLLAMA_API_URL = "https://ollama.com/v1/chat/completions"
 
 # Data directory for conversation storage
 DATA_DIR = "data/conversations"
+
+# Web Search Configuration
+ENABLE_WEB_SEARCH = os.getenv("ENABLE_WEB_SEARCH", "true").lower() == "true"
+WEB_SEARCH_NUM_QUERIES = int(os.getenv("WEB_SEARCH_NUM_QUERIES", "3"))  # Number of search queries per question
+WEB_SEARCH_MAX_RESULTS = int(os.getenv("WEB_SEARCH_MAX_RESULTS", "5"))  # Results per query
+WEB_SEARCH_FETCH_FULL = os.getenv("WEB_SEARCH_FETCH_FULL", "false").lower() == "true"  # Fetch full page content

@@ -10,7 +10,11 @@ import json
 import asyncio
 
 from . import storage
-from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
+from .council import (
+    run_full_council, generate_conversation_title,
+    stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final,
+    calculate_aggregate_rankings, get_search_context
+)
 
 app = FastAPI(title="LLM Council API")
 
@@ -142,25 +146,32 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             # Add user message
             storage.add_user_message(conversation_id, request.content)
 
-            # Start title generation in parallel (don't await yet)
+            # Start title generation and web search in parallel (don't await yet)
             title_task = None
             if is_first_message:
                 title_task = asyncio.create_task(generate_conversation_title(request.content))
 
-            # Stage 1: Collect responses
+            search_task = asyncio.create_task(get_search_context(request.content))
+
+            # Wait for web search to complete
+            search_context = await search_task
+            if search_context:
+                yield f"data: {json.dumps({'type': 'search_complete', 'metadata': {'web_search_context_length': len(search_context)}})}\n\n"
+
+            # Stage 1: Collect responses (with search context)
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
-            stage1_results = await stage1_collect_responses(request.content)
+            stage1_results = await stage1_collect_responses(request.content, search_context)
             yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
 
-            # Stage 2: Collect rankings
+            # Stage 2: Collect rankings (with search context)
             yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
-            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results)
+            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results, search_context)
             aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
             yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
 
-            # Stage 3: Synthesize final answer
+            # Stage 3: Synthesize final answer (with search context)
             yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
-            stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results)
+            stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results, search_context)
             yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
 
             # Wait for title generation if it was started

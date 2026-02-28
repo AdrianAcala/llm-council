@@ -1,21 +1,77 @@
 """3-stage LLM Council orchestration."""
 
+import asyncio
 from typing import List, Dict, Any, Tuple
 from .openrouter import query_models_parallel, query_model
-from .config import COUNCIL_MODELS, CHAIRMAN_MODEL
+from .config import COUNCIL_MODELS, CHAIRMAN_MODEL, ENABLE_WEB_SEARCH, WEB_SEARCH_NUM_QUERIES, WEB_SEARCH_MAX_RESULTS, WEB_SEARCH_FETCH_FULL
+from .web_search import perform_web_search_for_query
 
 
-async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
+async def get_search_context(user_query: str) -> str:
     """
-    Stage 1: Collect individual responses from all council models.
+    Get web search context for the user query.
 
     Args:
         user_query: The user's question
 
     Returns:
+        Formatted search context or empty string if disabled/failed
+    """
+    if not ENABLE_WEB_SEARCH:
+        return ""
+
+    try:
+        context = await perform_web_search_for_query(
+            user_query=user_query,
+            num_searches=WEB_SEARCH_NUM_QUERIES,
+            max_results_per_search=WEB_SEARCH_MAX_RESULTS,
+            fetch_full_content=WEB_SEARCH_FETCH_FULL
+        )
+        return context
+    except Exception as e:
+        print(f"Web search error: {e}")
+        return ""
+
+
+def build_messages_with_context(user_query: str, search_context: str, system_prompt: str = "") -> List[Dict[str, str]]:
+    """
+    Build messages list with optional search context.
+
+    Args:
+        user_query: The user's question
+        search_context: Formatted search context from web search
+        system_prompt: Optional system prompt to prepend
+
+    Returns:
+        List of message dicts for the model
+    """
+    messages = []
+
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+
+    if search_context:
+        # Include search context in the user message
+        content = f"{search_context}\n\n---\n\nUser Question: {user_query}\n\nPlease answer the user's question using the web search results above where relevant."
+        messages.append({"role": "user", "content": content})
+    else:
+        messages.append({"role": "user", "content": user_query})
+
+    return messages
+
+
+async def stage1_collect_responses(user_query: str, search_context: str = "") -> List[Dict[str, Any]]:
+    """
+    Stage 1: Collect individual responses from all council models.
+
+    Args:
+        user_query: The user's question
+        search_context: Optional web search context to include
+
+    Returns:
         List of dicts with 'model' and 'response' keys
     """
-    messages = [{"role": "user", "content": user_query}]
+    messages = build_messages_with_context(user_query, search_context)
 
     # Query all models in parallel
     responses = await query_models_parallel(COUNCIL_MODELS, messages)
@@ -34,7 +90,8 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
 
 async def stage2_collect_rankings(
     user_query: str,
-    stage1_results: List[Dict[str, Any]]
+    stage1_results: List[Dict[str, Any]],
+    search_context: str = ""
 ) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
     """
     Stage 2: Each model ranks the anonymized responses.
@@ -42,6 +99,7 @@ async def stage2_collect_rankings(
     Args:
         user_query: The original user query
         stage1_results: Results from Stage 1
+        search_context: Optional web search context for reference
 
     Returns:
         Tuple of (rankings list, label_to_model mapping)
@@ -61,11 +119,13 @@ async def stage2_collect_rankings(
         for label, result in zip(labels, stage1_results)
     ])
 
+    # Include search context in ranking prompt if available
+    context_section = f"\n\n{search_context}\n\n" if search_context else ""
+
     ranking_prompt = f"""You are evaluating different responses to the following question:
 
 Question: {user_query}
-
-Here are the responses from different models (anonymized):
+{context_section}Here are the responses from different models (anonymized):
 
 {responses_text}
 
@@ -115,7 +175,8 @@ Now provide your evaluation and ranking:"""
 async def stage3_synthesize_final(
     user_query: str,
     stage1_results: List[Dict[str, Any]],
-    stage2_results: List[Dict[str, Any]]
+    stage2_results: List[Dict[str, Any]],
+    search_context: str = ""
 ) -> Dict[str, Any]:
     """
     Stage 3: Chairman synthesizes final response.
@@ -124,6 +185,7 @@ async def stage3_synthesize_final(
         user_query: The original user query
         stage1_results: Individual model responses from Stage 1
         stage2_results: Rankings from Stage 2
+        search_context: Optional web search context
 
     Returns:
         Dict with 'model' and 'response' keys
@@ -139,7 +201,10 @@ async def stage3_synthesize_final(
         for result in stage2_results
     ])
 
-    chairman_prompt = f"""You are the Chairman of an LLM Council. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.
+    # Include search context if available
+    context_section = f"\n\nWEB SEARCH CONTEXT:\n{search_context}\n" if search_context else ""
+
+    chairman_prompt = f"""You are the Chairman of an LLM Council. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.{context_section}
 
 Original Question: {user_query}
 
@@ -153,6 +218,7 @@ Your task as Chairman is to synthesize all of this information into a single, co
 - The individual responses and their insights
 - The peer rankings and what they reveal about response quality
 - Any patterns of agreement or disagreement
+- The web search context (if provided above) for factual accuracy
 
 Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
 
@@ -295,7 +361,7 @@ Title:"""
 
 async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
     """
-    Run the complete 3-stage council process.
+    Run the complete 3-stage council process with optional web search.
 
     Args:
         user_query: The user's question
@@ -303,8 +369,17 @@ async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
     Returns:
         Tuple of (stage1_results, stage2_results, stage3_result, metadata)
     """
-    # Stage 1: Collect individual responses
-    stage1_results = await stage1_collect_responses(user_query)
+    # Perform web search in parallel with any other setup (if enabled)
+    search_task = asyncio.create_task(get_search_context(user_query))
+
+    # Wait for search results
+    search_context = await search_task
+
+    if search_context:
+        print(f"Web search completed, context length: {len(search_context)} chars")
+
+    # Stage 1: Collect individual responses (with search context)
+    stage1_results = await stage1_collect_responses(user_query, search_context)
 
     # If no models responded successfully, return error
     if not stage1_results:
@@ -313,23 +388,28 @@ async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
             "response": "All models failed to respond. Please try again."
         }, {}
 
-    # Stage 2: Collect rankings
-    stage2_results, label_to_model = await stage2_collect_rankings(user_query, stage1_results)
+    # Stage 2: Collect rankings (with search context for reference)
+    stage2_results, label_to_model = await stage2_collect_rankings(
+        user_query, stage1_results, search_context
+    )
 
     # Calculate aggregate rankings
     aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
 
-    # Stage 3: Synthesize final answer
+    # Stage 3: Synthesize final answer (with search context)
     stage3_result = await stage3_synthesize_final(
         user_query,
         stage1_results,
-        stage2_results
+        stage2_results,
+        search_context
     )
 
     # Prepare metadata
     metadata = {
         "label_to_model": label_to_model,
-        "aggregate_rankings": aggregate_rankings
+        "aggregate_rankings": aggregate_rankings,
+        "web_search_enabled": ENABLE_WEB_SEARCH,
+        "web_search_context_length": len(search_context) if search_context else 0
     }
 
     return stage1_results, stage2_results, stage3_result, metadata
