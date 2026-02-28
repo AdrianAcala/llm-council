@@ -182,7 +182,7 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className="flex h-screen w-screen overflow-hidden bg-bg-primary text-text-primary font-body">
       <Sidebar
         conversations={conversations}
         currentConversationId={currentConversationId}

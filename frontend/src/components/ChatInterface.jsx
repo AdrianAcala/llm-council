@@ -30,7 +30,6 @@ export default function ChatInterface({
   };
 
   const handleKeyDown = (e) => {
-    // Submit on Enter (without Shift)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
@@ -39,53 +38,95 @@ export default function ChatInterface({
 
   if (!conversation) {
     return (
-      <div className="chat-interface">
-        <div className="empty-state">
-          <h2>Welcome to LLM Council</h2>
-          <p>Create a new conversation to get started</p>
+      <div className="flex-1 flex flex-col h-screen bg-bg-primary relative">
+        <div className="flex-1 flex flex-col items-center justify-center h-full text-center p-12">
+          <div className="text-6xl mb-6 opacity-80">🏛️</div>
+          <h2 className="font-display text-3xl font-semibold text-text-primary tracking-tight mb-3">
+            Welcome to LLM Council
+          </h2>
+          <p className="text-base text-text-muted mb-8 max-w-md leading-relaxed">
+            A deliberative system where multiple AI models collaborate to answer your questions through anonymized peer review.
+          </p>
+          <div className="flex gap-4 flex-wrap justify-center">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-bg-card border border-border-custom rounded-md text-sm text-text-secondary">
+              <span className="text-base">📝</span>
+              <span>Collect Responses</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-bg-card border border-border-custom rounded-md text-sm text-text-secondary">
+              <span className="text-base">⚖️</span>
+              <span>Peer Rankings</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-bg-card border border-border-custom rounded-md text-sm text-text-secondary">
+              <span className="text-base">🎯</span>
+              <span>Synthesized Answer</span>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
+  const isEmpty = conversation.messages.length === 0;
+
   return (
-    <div className="chat-interface">
-      <div className="messages-container">
-        {conversation.messages.length === 0 ? (
-          <div className="empty-state">
-            <h2>Start a conversation</h2>
-            <p>Ask a question to consult the LLM Council</p>
+    <div className="flex-1 flex flex-col h-screen bg-bg-primary relative">
+      <div className="flex-1 overflow-y-auto p-8 scroll-smooth">
+        {isEmpty ? (
+          <div className="flex-1 flex flex-col items-center justify-center h-full text-center p-12">
+            <div className="text-6xl mb-6 opacity-80">💭</div>
+            <h2 className="font-display text-3xl font-semibold text-text-primary tracking-tight mb-3">
+              Start a Conversation
+            </h2>
+            <p className="text-base text-text-muted max-w-md leading-relaxed">
+              Ask a question to convene the council. Multiple models will deliberate and provide a refined answer.
+            </p>
           </div>
         ) : (
           conversation.messages.map((msg, index) => (
-            <div key={index} className="message-group">
+            <div key={index} className="mb-10 animate-fade-in-up">
               {msg.role === 'user' ? (
-                <div className="user-message">
-                  <div className="message-label">You</div>
-                  <div className="message-content">
+                <div className="mb-6">
+                  <div className="text-xs font-semibold text-text-muted mb-2.5 uppercase tracking-widest flex items-center gap-2">
+                    <span className="inline-block w-1.5 h-1.5 bg-accent-teal rounded-full" />
+                    You
+                  </div>
+                  <div className="bg-bg-card p-5 rounded-xl border border-border-custom text-text-primary leading-relaxed max-w-[85%] whitespace-pre-wrap shadow-sm">
                     <div className="markdown-content">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="assistant-message">
-                  <div className="message-label">LLM Council</div>
+                <div className="mb-6">
+                  <div className="text-xs font-semibold text-text-muted mb-2.5 uppercase tracking-widest flex items-center gap-2">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-gradient-to-br from-accent-gold to-accent-bronze" />
+                    Council Deliberation
+                  </div>
 
-                  {/* Stage 1 */}
+                  {index === 0 && (
+                    <div className="bg-gradient-to-r from-stage1-light to-bg-card p-5 rounded-xl border border-border-custom mb-6">
+                      <div className="font-display text-lg font-semibold text-text-primary mb-2">
+                        The Council Convenes
+                      </div>
+                      <div className="text-sm text-text-secondary">
+                        The models are now deliberating on your question. This process happens in three stages:
+                        individual responses, anonymized peer rankings, and final synthesis by the chairman.
+                      </div>
+                    </div>
+                  )}
+
                   {msg.loading?.stage1 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 1: Collecting individual responses...</span>
+                    <div className="flex items-center gap-3 px-5 py-4 bg-bg-card rounded-lg border border-border-custom shadow-sm mb-4 max-w-fit">
+                      <div className="w-5 h-5 border-2 border-border-custom border-t-accent-gold rounded-full animate-spin-slow" />
+                      <span className="text-sm text-text-secondary">Stage 1: Gathering individual perspectives...</span>
                     </div>
                   )}
                   {msg.stage1 && <Stage1 responses={msg.stage1} />}
 
-                  {/* Stage 2 */}
                   {msg.loading?.stage2 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 2: Peer rankings...</span>
+                    <div className="flex items-center gap-3 px-5 py-4 bg-bg-card rounded-lg border border-border-custom shadow-sm mb-4 max-w-fit">
+                      <div className="w-5 h-5 border-2 border-border-custom border-t-accent-gold rounded-full animate-spin-slow" />
+                      <span className="text-sm text-text-secondary">Stage 2: Conducting peer review...</span>
                     </div>
                   )}
                   {msg.stage2 && (
@@ -96,11 +137,10 @@ export default function ChatInterface({
                     />
                   )}
 
-                  {/* Stage 3 */}
                   {msg.loading?.stage3 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 3: Final synthesis...</span>
+                    <div className="flex items-center gap-3 px-5 py-4 bg-bg-card rounded-lg border border-border-custom shadow-sm mb-4 max-w-fit">
+                      <div className="w-5 h-5 border-2 border-border-custom border-t-accent-gold rounded-full animate-spin-slow" />
+                      <span className="text-sm text-text-secondary">Stage 3: Synthesizing final answer...</span>
                     </div>
                   )}
                   {msg.stage3 && <Stage3 finalResponse={msg.stage3} />}
@@ -111,32 +151,34 @@ export default function ChatInterface({
         )}
 
         {isLoading && (
-          <div className="loading-indicator">
-            <div className="spinner"></div>
-            <span>Consulting the council...</span>
+          <div className="flex items-center gap-3 px-6 py-5 bg-bg-card border border-border-custom rounded-xl max-w-fit shadow-sm">
+            <div className="w-5 h-5 border-2 border-border-custom border-t-accent-gold rounded-full animate-spin-slow" />
+            <span className="text-sm text-text-muted">The council is deliberating...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {conversation.messages.length === 0 && (
-        <form className="input-form" onSubmit={handleSubmit}>
+      {isEmpty && (
+        <form onSubmit={handleSubmit} className="flex items-end gap-3 px-12 pb-8 pt-6 border-t border-border-custom bg-bg-card relative">
+          <div className="absolute -top-px left-12 right-12 h-px bg-gradient-to-r from-transparent via-border-custom to-transparent" />
           <textarea
-            className="message-input"
-            placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isLoading}
             rows={3}
+            placeholder="What would you like to ask the council? (Shift+Enter for new line)"
+            className="flex-1 py-4 px-5 bg-bg-primary border border-border-custom rounded-xl text-text-primary text-[15px] leading-relaxed resize-y min-h-14 max-h-48 transition-base placeholder:text-text-light focus:border-accent-gold focus:ring-3 focus:ring-accent-gold/10 focus:bg-bg-card disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-bg-secondary"
           />
           <button
             type="submit"
-            className="send-button"
             disabled={!input.trim() || isLoading}
+            className="py-4 px-7 bg-text-primary text-bg-card rounded-xl text-[15px] font-medium whitespace-nowrap h-14 flex items-center gap-2 transition-base hover:bg-accent-bronze hover:border-accent-bronze hover:-translate-y-px hover:shadow-md active:translate-y-0 active:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-text-light disabled:hover:translate-y-0 disabled:hover:shadow-none group"
           >
             Send
+            <span className="text-lg transition-fast group-hover:translate-x-0.5">→</span>
           </button>
         </form>
       )}
