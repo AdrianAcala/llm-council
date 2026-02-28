@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './Stage3.css';
 
 function getModelShortName(model) {
@@ -37,8 +38,8 @@ export default function Stage3({ finalResponse }) {
           </span>
         </div>
 
-        <div className="text-text-primary leading-8 text-[15px]">
-          <ReactMarkdown>{finalResponse.response}</ReactMarkdown>
+        <div className="markdown-content text-text-primary leading-8 text-[15px]">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{finalResponse.response}</ReactMarkdown>
         </div>
       </div>
     </div>

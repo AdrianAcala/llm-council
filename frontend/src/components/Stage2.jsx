@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './Stage2.css';
 
 function deAnonymizeText(text, labelToModel) {
@@ -114,8 +115,8 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
               </span>
             )}
           </div>
-          <div className="text-text-primary leading-relaxed">
-            <ReactMarkdown>
+          <div className="markdown-content text-text-primary leading-relaxed">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {deAnonymizeText(rankings[activeTab]?.ranking || '', labelToModel)}
             </ReactMarkdown>
           </div>
